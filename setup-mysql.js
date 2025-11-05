@@ -11,27 +11,26 @@ const connection = mysql.createConnection({
 
 async function setupMySQL() {
   try {
-    console.log('🔌 Connecting to MySQL...');
+    console.log(' Connecting to MySQL...');
     
-    // Test connection
+    // Testing connection
     await new Promise((resolve, reject) => {
       connection.connect(err => {
         if (err) reject(err);
         else resolve();
       });
     });
-    console.log('✅ Connected to MySQL server');
+    console.log('Connected to MySQL server');
 
-    // Create database
+    //Database 
     await new Promise((resolve, reject) => {
       connection.query('CREATE DATABASE IF NOT EXISTS students', (err) => {
         if (err) reject(err);
         else resolve();
       });
     });
-    console.log('✅ Database created or already exists');
+    console.log('Database created or already exists');
 
-    // Use the database
     await new Promise((resolve, reject) => {
       connection.query('USE students', (err) => {
         if (err) reject(err);
@@ -39,7 +38,6 @@ async function setupMySQL() {
       });
     });
 
-    // Create table
     const createTableSQL = `
       CREATE TABLE IF NOT EXISTS students (
        name VARCHAR(100) NOT NULL,
@@ -54,7 +52,7 @@ async function setupMySQL() {
         else resolve();
       });
     });
-    console.log('✅students table created or already exists');
+    console.log('students table created or already exists');
 
     // Insert sample data
     const insertSampleData = `
@@ -69,15 +67,15 @@ async function setupMySQL() {
         else resolve();
       });
     });
-    console.log('✅ Sample data inserted');
+    console.log('Sample data inserted');
 
-    console.log('🎉 MySQL setup completed successfully!');
+    console.log('MySQL setup completed successfully!');
 
   } catch (error) {
-    console.error('❌ MySQL setup failed:', error.message);
+    console.error('MySQL setup failed:', error.message);
   } finally {
     connection.end();
-    console.log('🔌 Connection closed');
+    console.log('Connection closed');
   }
 }
 
