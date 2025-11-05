@@ -1,78 +1,221 @@
-const initializeDatabase = () => {
-  // First test if we can connect to the database
-  pool.getConnection((connErr, connection) => {
-    if (connErr) {
-      console.error('❌ Database connection error:', connErr.message);
-      
-      if (connErr.code === 'ER_BAD_DB_ERROR') {
-        console.log('🔄 Database does not exist, creating it...');
-        createDatabaseAndTables();
-        return;
-      }
-    } else {
-      console.log('✅ Database connection successful');
-      connection.release();
-      createTables();
-    }
-  });
-};
+import express from 'express';
+import cors from 'cors';
+import studentsRouter from './routes/students.js';
+import mysql from 'mysql2';
+import dotenv from 'dotenv';
 
+dotenv.config();
+
+console.log('🚀 Starting Students Service Server...');
+
+// Create pool first
+const pool = mysql.createPool({
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  password: process.env.MYSQLPASSWORD,
+  database: process.env.MYSQLDATABASE,
+  port: process.env.MYSQLPORT || 3306,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  charset: 'utf8mb4'
+});
+
+console.log('📋 Environment check:', {
+  PORT: process.env.PORT,
+  MYSQLHOST: process.env.MYSQLHOST ? 'Set' : 'Missing',
+  MYSQLDATABASE: process.env.MYSQLDATABASE
+});
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Database initialization functions
 const createDatabaseAndTables = () => {
-  // Create a temporary connection without database name
-  const tempPool = mysql.createPool({
-    host: process.env.MYSQLHOST,
-    user: process.env.MYSQLUSER,
-    password: process.env.MYSQLPASSWORD,
-    port: process.env.MYSQLPORT || 3306
-  });
+  return new Promise((resolve, reject) => {
+    // Create a temporary connection without database name
+    const tempPool = mysql.createPool({
+      host: process.env.MYSQLHOST,
+      user: process.env.MYSQLUSER,
+      password: process.env.MYSQLPASSWORD,
+      port: process.env.MYSQLPORT || 3306
+    });
 
-  // Create database
-  tempPool.query(`CREATE DATABASE IF NOT EXISTS ${process.env.MYSQLDATABASE}`, (err) => {
-    if (err) {
-      console.error('❌ Error creating database:', err.message);
-    } else {
-      console.log('✅ Database created:', process.env.MYSQLDATABASE);
-      
-      // Now create tables
-      createTables();
-    }
-    tempPool.end();
+    // Create database
+    tempPool.query(`CREATE DATABASE IF NOT EXISTS ${process.env.MYSQLDATABASE}`, (err) => {
+      if (err) {
+        console.error('❌ Error creating database:', err.message);
+        tempPool.end();
+        reject(err);
+      } else {
+        console.log('✅ Database created/verified:', process.env.MYSQLDATABASE);
+        
+        // Create tables in the new database
+        const createTableSQL = `
+          CREATE TABLE IF NOT EXISTS ${process.env.MYSQLDATABASE}.students (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            email VARCHAR(100) NOT NULL,
+            course VARCHAR(100) NOT NULL
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `;
+
+        tempPool.query(createTableSQL, (tableErr) => {
+          if (tableErr) {
+            console.error('❌ Error creating students table:', tableErr.message);
+            tempPool.end();
+            reject(tableErr);
+          } else {
+            console.log('✅ Students table created');
+            
+            // Insert sample data
+            const sampleDataSQL = `
+              INSERT IGNORE INTO ${process.env.MYSQLDATABASE}.students (name, email, course) VALUES
+              ('Thabo', 'thabo@gmail.com', 'Algebra'),
+              ('Mpho', 'mpho@gmail.com', 'IT')
+            `;
+            
+            tempPool.query(sampleDataSQL, (insertErr) => {
+              tempPool.end();
+              if (insertErr) {
+                console.log('ℹ️ Sample data already exists or insertion skipped');
+              } else {
+                console.log('✅ Sample data inserted');
+              }
+              resolve();
+            });
+          }
+        });
+      }
+    });
   });
 };
 
-const createTables = () => {
-  const createTableSQL = `
-    CREATE TABLE IF NOT EXISTS students (
-      id INT AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      email VARCHAR(100) NOT NULL,
-      course VARCHAR(100) NOT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `;
-
-  pool.query(createTableSQL, (err) => {
-    if (err) {
-      console.error('❌ Error creating students table:', err.message);
-    } else {
-      console.log('✅ Students table ready');
-      
-      // Insert sample data
-      const sampleDataSQL = `
-        INSERT IGNORE INTO students (name, email, course) VALUES
-        ('Thabo', 'thabo@gmail.com', 'Algebra'),
-        ('Mpho', 'mpho@gmail.com', 'IT')
-      `;
-      
-      pool.query(sampleDataSQL, (insertErr) => {
-        if (insertErr) {
-          console.log('ℹ️ Sample data already exists');
+const initializeDatabase = async () => {
+  try {
+    // Test connection to the database
+    await new Promise((resolve, reject) => {
+      pool.getConnection((connErr, connection) => {
+        if (connErr) {
+          console.error('❌ Database connection error:', connErr.message);
+          
+          if (connErr.code === 'ER_BAD_DB_ERROR') {
+            console.log('🔄 Database does not exist, creating it...');
+            reject(connErr); // Trigger database creation
+          } else {
+            reject(connErr);
+          }
         } else {
-          console.log('✅ Sample data inserted');
+          console.log('✅ Database connection successful');
+          connection.release();
+          resolve();
         }
       });
+    });
+    
+    console.log('✅ Database is ready');
+  } catch (error) {
+    if (error.code === 'ER_BAD_DB_ERROR') {
+      // Database doesn't exist, create it
+      await createDatabaseAndTables();
+      console.log('✅ Database and tables created successfully');
+    } else {
+      console.error('❌ Database initialization failed:', error.message);
+      throw error;
     }
-  });
+  }
 };
 
-// Initialize database when server starts
-initializeDatabase();
+// Routes
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Students Service is running!',
+    endpoints: {
+      health: '/health',
+      students: '/api/students'
+    }
+  });
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  pool.getConnection((err, connection) => {
+    if (err) {
+      return res.status(500).json({ 
+        status: 'error', 
+        message: 'Database connection failed',
+        error: err.message 
+      });
+    }
+    
+    connection.query('SELECT 1 as test', (queryErr, results) => {
+      connection.release();
+      
+      if (queryErr) {
+        return res.status(500).json({ 
+          status: 'error', 
+          message: 'Database query failed',
+          error: queryErr.message 
+        });
+      }
+      
+      res.json({ 
+        status: 'healthy', 
+        message: 'Students service and database are working',
+        timestamp: new Date().toISOString()
+      });
+    });
+  });
+});
+
+// Debug endpoint to check database and tables
+app.get('/debug/db', (req, res) => {
+  pool.query('SELECT DATABASE() as current_db, USER() as user', (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    
+    pool.query('SHOW TABLES', (tableErr, tables) => {
+      if (tableErr) {
+        return res.status(500).json({ error: tableErr.message });
+      }
+      
+      res.json({
+        current_database: results[0].current_db,
+        current_user: results[0].user,
+        tables: tables,
+        environment: {
+          MYSQLDATABASE: process.env.MYSQLDATABASE,
+          MYSQLHOST: process.env.MYSQLHOST
+        }
+      });
+    });
+  });
+});
+
+// API routes
+app.use('/api/students', studentsRouter);
+
+const PORT = process.env.PORT || 4001;
+
+// Initialize database and start server
+initializeDatabase()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`🚀 Students Server running on port ${PORT}`);
+      console.log(`📊 Using database: ${process.env.MYSQLDATABASE}`);
+      console.log(`🌐 Health check: http://localhost:${PORT}/health`);
+    });
+  })
+  .catch((error) => {
+    console.error('❌ Failed to initialize database:', error.message);
+    console.log('🔄 Starting server anyway...');
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Students Server running on port ${PORT} (database may have issues)`);
+    });
+  });
+
+// Export pool for use in other files
+export { pool };
