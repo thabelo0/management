@@ -5,7 +5,7 @@ import pool from './db.js';
 
 const app = express();
 
-console.log('🚀 Starting students service Server...');
+console.log('🚀 Starting Students Service Server...');
 console.log('📋 Environment check:', {
   PORT: process.env.PORT,
   MYSQLHOST: process.env.MYSQLHOST ? 'Set' : 'Missing',
@@ -22,7 +22,7 @@ const createTables = () => {
       id INT AUTO_INCREMENT PRIMARY KEY,
       name VARCHAR(100) NOT NULL,
       email VARCHAR(100) NOT NULL,
-      course varchar(100) NOT NULL,
+      course VARCHAR(100) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `;
 
@@ -30,13 +30,13 @@ const createTables = () => {
     if (err) {
       console.error('❌ Error creating students table:', err.message);
     } else {
-      console.log('✅ students table ready');
+      console.log('✅ Students table ready');
       
       // Insert sample data
       const sampleDataSQL = `
         INSERT IGNORE INTO students (name, email, course) VALUES
         ('Thabo', 'thabo@gmail.com', 'Algebra'),
-        ('Mpho', 'mpho@gmail.com','IT')
+        ('Mpho', 'mpho@gmail.com', 'IT')
       `;
       
       pool.query(sampleDataSQL, (insertErr) => {
@@ -56,10 +56,10 @@ createTables();
 // Routes
 app.get('/', (req, res) => {
   res.json({ 
-    message: ' service is running!',
+    message: 'Students Service is running!',
     endpoints: {
       health: '/health',
-      students: '/services/studentService'
+      students: '/api/students'
     }
   });
 });
@@ -88,20 +88,20 @@ app.get('/health', (req, res) => {
       
       res.json({ 
         status: 'healthy', 
-        message: 'service and database are working',
+        message: 'Students service and database are working',
         timestamp: new Date().toISOString()
       });
     });
   });
 });
 
-// API routes
-app.use('/services/studentService', studentsRouter);
+// API routes - FIXED ROUTE to match frontend
+app.use('/api/students', studentsRouter);
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 4001; // CHANGED PORT to avoid conflict
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🚀 Students Server running on port ${PORT}`);
   console.log(`📊 Using database: ${process.env.MYSQLDATABASE}`);
   console.log(`🌐 Health check: http://localhost:${PORT}/health`);
 });
