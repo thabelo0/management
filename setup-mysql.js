@@ -54,7 +54,7 @@ async function setupMySQL() {
     });
     console.log('students table created or already exists');
 
-    // Insert sample data
+    // sample data
     const insertSampleData = `
       INSERT IGNORE INTO students (name, email, course) VALUES
       ('Thabo', 'thabo@gmail.com', 'Maths'),
