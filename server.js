@@ -1,21 +1,45 @@
-import express from 'express';
-import cors from 'cors';
-import studentsRouter from './routes/students.js';
-import pool from './db.js';
+const initializeDatabase = () => {
+  // First test if we can connect to the database
+  pool.getConnection((connErr, connection) => {
+    if (connErr) {
+      console.error('❌ Database connection error:', connErr.message);
+      
+      if (connErr.code === 'ER_BAD_DB_ERROR') {
+        console.log('🔄 Database does not exist, creating it...');
+        createDatabaseAndTables();
+        return;
+      }
+    } else {
+      console.log('✅ Database connection successful');
+      connection.release();
+      createTables();
+    }
+  });
+};
 
-const app = express();
+const createDatabaseAndTables = () => {
+  // Create a temporary connection without database name
+  const tempPool = mysql.createPool({
+    host: process.env.MYSQLHOST,
+    user: process.env.MYSQLUSER,
+    password: process.env.MYSQLPASSWORD,
+    port: process.env.MYSQLPORT || 3306
+  });
 
-console.log('🚀 Starting Students Service Server...');
-console.log('📋 Environment check:', {
-  PORT: process.env.PORT,
-  MYSQLHOST: process.env.MYSQLHOST ? 'Set' : 'Missing',
-  MYSQLDATABASE: process.env.MYSQLDATABASE
-});
+  // Create database
+  tempPool.query(`CREATE DATABASE IF NOT EXISTS ${process.env.MYSQLDATABASE}`, (err) => {
+    if (err) {
+      console.error('❌ Error creating database:', err.message);
+    } else {
+      console.log('✅ Database created:', process.env.MYSQLDATABASE);
+      
+      // Now create tables
+      createTables();
+    }
+    tempPool.end();
+  });
+};
 
-app.use(cors());
-app.use(express.json());
-
-// Create tables if they don't exist (non-blocking)
 const createTables = () => {
   const createTableSQL = `
     CREATE TABLE IF NOT EXISTS students (
@@ -50,58 +74,5 @@ const createTables = () => {
   });
 };
 
-// Initialize database
-createTables();
-
-// Routes
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Students Service is running!',
-    endpoints: {
-      health: '/health',
-      students: '/api/students'
-    }
-  });
-});
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  pool.getConnection((err, connection) => {
-    if (err) {
-      return res.status(500).json({ 
-        status: 'error', 
-        message: 'Database connection failed',
-        error: err.message 
-      });
-    }
-    
-    connection.query('SELECT 1 as test', (queryErr, results) => {
-      connection.release();
-      
-      if (queryErr) {
-        return res.status(500).json({ 
-          status: 'error', 
-          message: 'Database query failed',
-          error: queryErr.message 
-        });
-      }
-      
-      res.json({ 
-        status: 'healthy', 
-        message: 'Students service and database are working',
-        timestamp: new Date().toISOString()
-      });
-    });
-  });
-});
-
-// API routes - FIXED ROUTE to match frontend
-app.use('/api/students', studentsRouter);
-
-const PORT = process.env.PORT || 4001; // CHANGED PORT to avoid conflict
-
-app.listen(PORT, () => {
-  console.log(`🚀 Students Server running on port ${PORT}`);
-  console.log(`📊 Using database: ${process.env.MYSQLDATABASE}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/health`);
-});
+// Initialize database when server starts
+initializeDatabase();
