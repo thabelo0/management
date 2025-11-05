@@ -3,20 +3,23 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-console.log('🔌 Setting up database connection for Railway...');
+console.log('🔌 Setting up database connection for students...');
+console.log('📋 Database config:', {
+  host: process.env.MYSQLHOST,
+  user: process.env.MYSQLUSER,
+  database: process.env.MYSQLDATABASE, // Should be 'students'
+  port: process.env.MYSQLPORT
+});
 
-// Use Railway's environment variables directly
 const pool = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
-  database: process.env.MYSQLDATABASE,
+  database: process.env.MYSQLDATABASE, // Use the environment variable
   port: process.env.MYSQLPORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
   charset: 'utf8mb4'
 });
 
