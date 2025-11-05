@@ -31,7 +31,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database initialization functions
+// Database initialization
 const createDatabaseAndTables = () => {
   return new Promise((resolve, reject) => {
 
