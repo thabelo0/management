@@ -24,7 +24,7 @@ async function setupMySQL() {
 
     // Create database
     await new Promise((resolve, reject) => {
-      connection.query('CREATE DATABASE IF NOT EXISTS bakery', (err) => {
+      connection.query('CREATE DATABASE IF NOT EXISTS students', (err) => {
         if (err) reject(err);
         else resolve();
       });
@@ -33,7 +33,7 @@ async function setupMySQL() {
 
     // Use the database
     await new Promise((resolve, reject) => {
-      connection.query('USE bakery', (err) => {
+      connection.query('USE students', (err) => {
         if (err) reject(err);
         else resolve();
       });
@@ -41,15 +41,10 @@ async function setupMySQL() {
 
     // Create table
     const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS orders (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        order_id VARCHAR(50) UNIQUE NOT NULL,
-        customer_name VARCHAR(100) NOT NULL,
-        product VARCHAR(100) NOT NULL,
-        quantity INT DEFAULT 1,
-        order_date DATE,
-        status ENUM('Pending', 'Completed', 'Cancelled') DEFAULT 'Pending',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      CREATE TABLE IF NOT EXISTS students (
+       name VARCHAR(100) NOT NULL,
+        email varchar(100) NOT NULL,
+        course varchar(100) NOT NULL
       )
     `;
 
@@ -59,14 +54,13 @@ async function setupMySQL() {
         else resolve();
       });
     });
-    console.log('✅ Orders table created or already exists');
+    console.log('✅students table created or already exists');
 
     // Insert sample data
     const insertSampleData = `
-      INSERT IGNORE INTO orders (order_id, customer_name, product, quantity, order_date, status) VALUES
-      ('ORD001', 'John Doe', 'Chocolate Cake', 2, '2024-01-15', 'Pending'),
-      ('ORD002', 'Jane Smith', 'Blueberry Muffin', 6, '2024-01-16', 'Completed'),
-      ('ORD003', 'Mike Johnson', 'Croissant', 12, '2024-01-17', 'Pending')
+      INSERT IGNORE INTO students (name, email, course) VALUES
+      ('Thabo', 'thabo@gmail.com', 'Maths'),
+      ('Mpho', 'mpho@gmail.com', 'Algebra')
     `;
 
     await new Promise((resolve, reject) => {
