@@ -23,7 +23,6 @@ const pool = mysql.createPool({
   charset: 'utf8mb4'
 });
 
-//testing
 pool.getConnection((err, connection) => {
   if (err) {
     console.error('Database connection failed:', err.message);
