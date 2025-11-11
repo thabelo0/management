@@ -8,7 +8,6 @@ dotenv.config();
 
 console.log('Starting Students Service Server...');
 
-// Creating pool
 const pool = mysql.createPool({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
@@ -31,12 +30,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Database initialization
 const createDatabaseAndTables = () => {
   return new Promise((resolve, reject) => {
 
     
-    // temporary connection
+    // temporary connectivity
     const tempPool = mysql.createPool({
       host: process.env.MYSQLHOST,
       user: process.env.MYSQLUSER,
@@ -44,7 +42,6 @@ const createDatabaseAndTables = () => {
       port: process.env.MYSQLPORT || 3306
     });
 
-    // Ddatabase
     tempPool.query(`CREATE DATABASE IF NOT EXISTS ${process.env.MYSQLDATABASE}`, (err) => {
       if (err) {
         console.error('Error creating database:', err.message);
@@ -70,7 +67,6 @@ const createDatabaseAndTables = () => {
           } else {
             console.log(' Students table created');
             
-            // sample data
             const sampleDataSQL = `
               INSERT IGNORE INTO ${process.env.MYSQLDATABASE}.students (name, email, course) VALUES
               ('Thabo', 'thabo@gmail.com', 'Algebra'),
@@ -95,7 +91,8 @@ const createDatabaseAndTables = () => {
 
 const initializeDatabase = async () => {
   try {
-    // connection testing to database
+    
+    // connection test
     await new Promise((resolve, reject) => {
       pool.getConnection((connErr, connection) => {
         if (connErr) {
@@ -129,7 +126,6 @@ const initializeDatabase = async () => {
   }
 };
 
-// Routes
 app.get('/', (req, res) => {
   res.json({ 
     message: 'Students Service is running!',
@@ -196,7 +192,7 @@ app.get('/debug/db', (req, res) => {
   });
 });
 
-// API routes
+
 app.use('/api/students', studentsRouter);
 
 const PORT = process.env.PORT || 4001;
