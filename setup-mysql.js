@@ -22,7 +22,6 @@ async function setupMySQL() {
     });
     console.log('Connected to MySQL server');
 
-    //Database 
     await new Promise((resolve, reject) => {
       connection.query('CREATE DATABASE IF NOT EXISTS students', (err) => {
         if (err) reject(err);
@@ -53,8 +52,7 @@ async function setupMySQL() {
       });
     });
     console.log('students table created or already exists');
-
-    // sample data
+    
     const insertSampleData = `
       INSERT IGNORE INTO students (name, email, course) VALUES
       ('Thabo', 'thabo@gmail.com', 'Maths'),
